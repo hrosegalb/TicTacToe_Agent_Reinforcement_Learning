@@ -6,7 +6,7 @@ class Game(object):
         self.board = np.zeros((3,3))
 
 
-    def make_move(self, position, player='X'):
+    def make_move(self, position, player):
         move_made = False
 
         if self.board[position[0]][position[1]] == 0:
@@ -34,6 +34,20 @@ class Game(object):
         index = (self.board[0][0] * 3**0) + (self.board[0][1] * 3**1) + (self.board[0][2] * 3**2) + (self.board[1][0] * 3**3) + (self.board[1][1] * 3**4) + (self.board[1][2] * 3**5) + (self.board[2][0] * 3**6) + (self.board[2][1] * 3**7) + (self.board[2][2] * 3**8)
         return int(index)
 
+
+    def is_next_move_winning_move(self, position, player):
+        result = False
+        if player == 'X':
+            self.board[position[0]][position[1]] = 1
+            result = has_agent_won()
+            self.board[position[0]][position[1]] = 0
+        elif player == 'O':
+            self.board[position[0]][position[1]] = 2
+            result = has_opponent_won()
+            self.board[position[0]][position[1]] = 0
+
+        return result
+        
 
     def has_agent_won(self):
         # Evaluate diagonals
