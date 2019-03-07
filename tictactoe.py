@@ -12,9 +12,16 @@ class Agent(object):
         self.prev_state = None
         self.prev_action = None
 
+    def print_qmatrix(self):
+        print(self.qmatrix)
+        print(np.amax(self.qmatrix))
+        print(np.histogram(self.qmatrix))
     
-    def update_epsilon(self, new_epsilon):
-        self.epsilon = new_epsilon
+    def update_epsilon(self, delta):
+        if self.epsilon - delta < 0.0:
+            self.epsilon = 0.0
+        else:
+            self.epsilon -= delta
 
     
     def qlearning(self, game):
@@ -25,13 +32,13 @@ class Agent(object):
         state = game.translate_board_state_to_index()
 
         if game.has_opponent_won() == True:
-            reward = -1
-            self.qmatrix[self.prev_state, self.prev_action] = qmatrix[self.prev_state, self.prev_action] + self.eta * (reward + self.gamma * np.max(self.qmatrix[state, :]) - self.qmatrix[self.prev_state, self.prev_action])
+            self.qmatrix[self.prev_state, self.prev_action] = self.qmatrix[self.prev_state, self.prev_action] + self.eta * (reward + self.gamma * np.max(self.qmatrix[state, :]) - self.qmatrix[self.prev_state, self.prev_action])
             self.prev_state = None
             self.prev_action = None
             done = True
         elif game.is_it_a_draw() == True:
-            self.qmatrix[self.prev_state, self.prev_action] = qmatrix[self.prev_state, self.prev_action] + self.eta * (reward + self.gamma * np.max(self.qmatrix[state, :]) - self.qmatrix[self.prev_state, self.prev_action])
+            reward = 0.5
+            self.qmatrix[self.prev_state, self.prev_action] = self.qmatrix[self.prev_state, self.prev_action] + self.eta * (reward + self.gamma * np.max(self.qmatrix[state, :]) - self.qmatrix[self.prev_state, self.prev_action])
             self.prev_state = None
             self.prev_action = None
             done = True
@@ -44,7 +51,13 @@ class Agent(object):
                 if random.random() < self.epsilon:
                     action = random.choice(indices)
                 else:
-                    action = np.argmax(self.qmatrix[state,:])
+                    max_val = float('-inf')
+                    top_index = None
+                    for index in indices:
+                        if self.qmatrix[state][index] > max_val:
+                            max_val = self.qmatrix[state][index]
+                            top_index = index
+                    action = top_index
         
                 action_idx = indices.index(action)
                 game.make_move(actions[action_idx], self.player)
@@ -52,6 +65,11 @@ class Agent(object):
 
                 if game.has_agent_won() == True:
                     reward = 1
+                    self.prev_state = None
+                    self.prev_action = None
+                    done = True
+                elif game.is_it_a_draw() == True:
+                    reward = 0.5
                     self.prev_state = None
                     self.prev_action = None
                     done = True
@@ -183,6 +201,10 @@ class Game(object):
         
         return True
 
+    
+    def reset_board(self):
+        self.board = np.zeros((3,3))
+
 
     def print_board(self):
         state = []
@@ -204,63 +226,58 @@ class Game(object):
 
 def opponent_moves(game):
     actions = game.get_possible_next_moves()
-    action = random.choice(actions)
-    game.make_move(position=action, player='O')
+    if len(actions) > 0:
+        action = random.choice(actions)
+        game.make_move(position=action, player='O')
+    
 
 def main():
     game = Game()
-    agent = Agent(eta=0.9, gamma=0.9, epsilon=1.0)
+    agent = Agent(eta=0.8, gamma=0.9, epsilon=1.0)
 
-    iter = 0
-    game.print_board()
-    while game.has_agent_won() == False and game.has_opponent_won() == False and game.is_it_a_draw() == False and iter < 10:
-        done = agent.qlearning(game)
-        game.print_board()
-        if not done:
+    stop = 100000
+    epsilon_decay = 0.05
+    m = 1000
+    starting_player = 'X'
+    agent_wins = 0
+    for i in range(stop):
+        if i == m:
+            agent.update_epsilon(epsilon_decay)
+            m += 100
+
+        if starting_player == 'X':
+            done = agent.qlearning(game)
+            if not done:
+                opponent_moves(game)
+            else:
+                if game.has_agent_won() == True:
+                    print("Agent has won!")
+                    agent_wins += 1
+                elif game.has_opponent_won() == True:
+                    print("Opponent has won!")
+                elif game.is_it_a_draw() == True:
+                    print("It's a draw!")
+                
+                game.reset_board()
+                starting_player = 'O'
+        else:
             opponent_moves(game)
-            game.print_board()
-        iter += 1
+            done = agent.qlearning(game)
+            if done:
+                if game.has_agent_won() == True:
+                    print("Agent has won!")
+                    agent_wins += 1
+                elif game.has_opponent_won() == True:
+                    print("Opponent has won!")
+                elif game.is_it_a_draw() == True:
+                    print("It's a draw!")
+                
+                game.reset_board()
+                starting_player = 'X'
+
+    agent.print_qmatrix()
+    print("Number of agent wins: {}/{}\nWin Percentage: {}".format(agent_wins, stop, (agent_wins/stop)))
     
-    if game.has_agent_won() == True:
-        print("Agent has won!")
-    elif game.has_opponent_won() == True:
-        print("Opponent has won!")
-    elif game.is_it_a_draw() == True:
-        print("It's a draw!")
-    
-    #index = game.translate_board_state_to_index()
-    #actions = game.get_possible_next_moves()
-    #print("Index: {}\nList of actions: {}".format(index, actions))
-
-    #game.make_move(position=(1,1), player='O')
-    #game.print_board()
-    #index = game.translate_board_state_to_index()
-    #actions = game.get_possible_next_moves()
-    #print("Index: {}\nList of actions: {}".format(index, actions))
-
-    #game.make_move(position=(0,0), player='X')
-    #game.print_board()
-    #index = game.translate_board_state_to_index()
-    #actions = game.get_possible_next_moves()
-    #print("Index: {}\nList of actions: {}".format(index, actions))
-
-    #game.make_move(position=(0,1), player='O')
-    #game.print_board()
-    #index = game.translate_board_state_to_index()
-    #actions = game.get_possible_next_moves()
-    #print("Index: {}\nList of actions: {}".format(index, actions))
-
-    #game.make_move(position=(1,0), player='X')
-    #game.print_board()
-    #index = game.translate_board_state_to_index()
-    #actions = game.get_possible_next_moves()
-    #print("Index: {}\nList of actions: {}".format(index, actions))
-    #game.make_move(position=(2,1), player='O')
-    #game.print_board()
-
-    #print("Has opponent won? {}".format(game.has_opponent_won()))
-    
-
 
 if __name__ == '__main__':
     main()
