@@ -14,8 +14,6 @@ class Agent(object):
 
     def print_qmatrix(self):
         print(self.qmatrix)
-        print(np.amax(self.qmatrix))
-        print(np.histogram(self.qmatrix))
     
     def update_epsilon(self, delta):
         if self.epsilon - delta < 0.0:
@@ -233,17 +231,18 @@ def opponent_moves(game):
 
 def main():
     game = Game()
-    agent = Agent(eta=0.8, gamma=0.9, epsilon=1.0)
+    agent = Agent(eta=0.5, gamma=0.9, epsilon=1.0)
 
     stop = 100000
-    epsilon_decay = 0.05
-    m = 1000
+    epsilon_decay = 0.1
+    m = 5000
     starting_player = 'X'
     agent_wins = 0
+    num_games = 0
     for i in range(stop):
         if i == m:
             agent.update_epsilon(epsilon_decay)
-            m += 100
+            m += 5000
 
         if starting_player == 'X':
             done = agent.qlearning(game)
@@ -252,11 +251,13 @@ def main():
             else:
                 if game.has_agent_won() == True:
                     print("Agent has won!")
-                    agent_wins += 1
+                    num_games += 1
                 elif game.has_opponent_won() == True:
                     print("Opponent has won!")
+                    num_games += 1
                 elif game.is_it_a_draw() == True:
                     print("It's a draw!")
+                    num_games += 1
                 
                 game.reset_board()
                 starting_player = 'O'
@@ -267,16 +268,19 @@ def main():
                 if game.has_agent_won() == True:
                     print("Agent has won!")
                     agent_wins += 1
+                    num_games += 1
                 elif game.has_opponent_won() == True:
                     print("Opponent has won!")
+                    num_games += 1
                 elif game.is_it_a_draw() == True:
                     print("It's a draw!")
+                    num_games += 1
                 
                 game.reset_board()
                 starting_player = 'X'
 
     agent.print_qmatrix()
-    print("Number of agent wins: {}/{}\nWin Percentage: {}".format(agent_wins, stop, (agent_wins/stop)))
+    print("Number of agent wins: {}/{}\nWin Percentage: {}".format(agent_wins, num_games, (agent_wins/num_games)))
     
 
 if __name__ == '__main__':
