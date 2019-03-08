@@ -228,59 +228,76 @@ def opponent_moves(game):
         action = random.choice(actions)
         game.make_move(position=action, player='O')
     
+def play_game(starting_player, agent, game):
+    result = "in progress"
+
+    if starting_player == 'X':
+        done = agent.qlearning(game)
+        if not done:
+            opponent_moves(game)
+        else:
+            if game.has_agent_won() == True:
+                result = "agent"
+            elif game.has_opponent_won() == True:
+                result = "opponent"
+            elif game.is_it_a_draw() == True:
+                result = "draw"
+                
+            game.reset_board()
+    else:
+        opponent_moves(game)
+        done = agent.qlearning(game)
+        if done:
+            if game.has_agent_won() == True:
+                result = "agent"
+            elif game.has_opponent_won() == True:
+                result = "opponent"
+            elif game.is_it_a_draw() == True:
+                result = "draw"
+                
+            game.reset_board()
+
+    return result
 
 def main():
     game = Game()
     agent = Agent(eta=0.5, gamma=0.9, epsilon=1.0)
 
+    num_epochs = 5
     stop = 100000
-    epsilon_decay = 0.1
+    epsilon_decay = 0.05
     m = 5000
-    starting_player = 'X'
-    agent_wins = 0
-    num_games = 0
-    for i in range(stop):
-        if i == m:
-            agent.update_epsilon(epsilon_decay)
-            m += 5000
+    
+    starting_player = 'X'    
+    for epoch in range(num_epochs):
+        for i in range(stop):
+            if i == m:
+                agent.update_epsilon(epsilon_decay)
 
-        if starting_player == 'X':
-            done = agent.qlearning(game)
-            if not done:
-                opponent_moves(game)
-            else:
-                if game.has_agent_won() == True:
-                    print("Agent has won!")
-                    num_games += 1
-                elif game.has_opponent_won() == True:
-                    print("Opponent has won!")
-                    num_games += 1
-                elif game.is_it_a_draw() == True:
-                    print("It's a draw!")
-                    num_games += 1
-                
-                game.reset_board()
+            result = play_game(starting_player, agent, game)
+            if starting_player == 'X':
                 starting_player = 'O'
-        else:
-            opponent_moves(game)
-            done = agent.qlearning(game)
-            if done:
-                if game.has_agent_won() == True:
-                    print("Agent has won!")
-                    agent_wins += 1
-                    num_games += 1
-                elif game.has_opponent_won() == True:
-                    print("Opponent has won!")
-                    num_games += 1
-                elif game.is_it_a_draw() == True:
-                    print("It's a draw!")
-                    num_games += 1
-                
-                game.reset_board()
+            else:
                 starting_player = 'X'
 
-    agent.print_qmatrix()
-    print("Number of agent wins: {}/{}\nWin Percentage: {}".format(agent_wins, num_games, (agent_wins/num_games)))
+        num_games = 0
+        agent_wins = 0
+        while num_games < 10:
+            result = play_game(starting_player, agent, game)
+            
+            if result == "agent":
+                agent_wins += 1
+                num_games += 1
+            elif result != "in progress":
+                num_games += 1
+
+            if starting_player == 'X':
+                starting_player = 'O'
+            else:
+                starting_player = 'X'
+        
+        print("After {} epochs, agent has won {} out of {} games.".format(epoch + 1, agent_wins, num_games))
+        
     
 
 if __name__ == '__main__':
