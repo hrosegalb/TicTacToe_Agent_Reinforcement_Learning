@@ -177,25 +177,12 @@ class Game(object):
         return int(index)
 
 
-    def is_next_move_winning_move(self, position, player):
-        result = False
-        if player == 'X':
-            self.board[position[0]][position[1]] = 1
-            result = has_agent_won()
-            self.board[position[0]][position[1]] = 0
-        elif player == 'O':
-            self.board[position[0]][position[1]] = 2
-            result = has_opponent_won()
-            self.board[position[0]][position[1]] = 0
-
-        return result
-
-
     def has_agent_won(self):
         # Evaluate diagonals
         if self.board[0][0] == 1 and self.board[1][1] == 1 and self.board[2][2] == 1:
             return True
-        elif self.board[2][0] == 1 and self.board[1][1] == 1 and self.board[0][2] == 1:
+        
+        if self.board[2][0] == 1 and self.board[1][1] == 1 and self.board[0][2] == 1:
             return True
 
         # Evaluate horizontally
@@ -215,7 +202,8 @@ class Game(object):
         # Evaluate diagonals
         if self.board[0][0] == 2 and self.board[1][1] == 2 and self.board[2][2] == 2:
             return True
-        elif self.board[2][0] == 2 and self.board[1][1] == 2 and self.board[0][2] == 2:
+        
+        if self.board[2][0] == 2 and self.board[1][1] == 2 and self.board[0][2] == 2:
             return True
 
         # Evaluate horizontally
@@ -320,16 +308,47 @@ def play_game(starting_player, agent, game):
 
     return result
 
+
+def assess_agent(starting_player, agent, game, y_axis, epoch=-1):
+    num_games = 0
+    agent_wins = 0 
+    while num_games < 10:
+        result = play_game(starting_player, agent, game)
+            
+        if result == "agent":
+            agent_wins += 1
+            num_games += 1
+        elif result != "in progress":
+            num_games += 1
+
+        if starting_player == 'X':
+            starting_player = 'O'
+        else:
+            starting_player = 'X'
+
+    if epoch > -1:
+        print("After {} epoch(s), agent has won {} out of {} games.".format(epoch + 1, agent_wins, num_games))
+    else:
+        print("Without training, agent won {} of {} games.".format(agent_wins, num_games))
+    y_axis.append(agent_wins)
+    
+    return starting_player, y_axis
+
+
 def main():
     game = Game()
     agent = Agent(eta=0.5, gamma=0.9, epsilon=0.1)
 
     num_epochs = 10
+    x_axis = [i for i in range(num_epochs + 1)]
+    y_axis = []
     stop = 10000
     epsilon_increase = 0.05
     m = 5000
     
-    starting_player = 'X'    
+    
+    starting_player = 'X'
+    starting_player, y_axis = assess_agent(starting_player, agent, game, y_axis)
     for epoch in range(num_epochs):
         game.reset_board()
         num_training_games = 0
@@ -346,24 +365,9 @@ def main():
             else:
                 starting_player = 'X'
 
-        num_games = 0
-        agent_wins = 0
         game.reset_board()
-        while num_games < 10:
-            result = play_game(starting_player, agent, game)
-            
-            if result == "agent":
-                agent_wins += 1
-                num_games += 1
-            elif result != "in progress":
-                num_games += 1
-
-            if starting_player == 'X':
-                starting_player = 'O'
-            else:
-                starting_player = 'X'
-        
-        print("After {} epoch(s), agent has won {} out of {} games.".format(epoch + 1, agent_wins, num_games))
+        starting_player, y_axis = assess_agent(starting_player, agent, game, y_axis, epoch)
+    print(y_axis)
         
     
 
