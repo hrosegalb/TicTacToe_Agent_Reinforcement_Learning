@@ -12,14 +12,12 @@ class Agent(object):
         self.prev_state = None
         self.prev_action = None
 
-    def print_qmatrix(self):
-        print(self.qmatrix)
-    
+
     def update_epsilon(self, delta):
-        if self.epsilon - delta < 0.0:
-            self.epsilon = 0.0
+        if self.epsilon + delta > 1.0:
+            self.epsilon = 1.0
         else:
-            self.epsilon -= delta
+            self.epsilon += delta
 
     
     def qlearning(self, game):
@@ -46,7 +44,10 @@ class Agent(object):
             if len(actions) > 0:
                 indices = self.translate_actions_to_indices(actions)
 
-                if random.random() < self.epsilon:
+                unique_vals = np.unique(self.qmatrix[state, :])
+                if random.random() < (1 - self.epsilon):
+                    action = random.choice(indices)
+                elif len(unique_vals) == 1 and unique_vals[0] == 0.0:
                     action = random.choice(indices)
                 else:
                     max_val = float('-inf')
@@ -75,6 +76,44 @@ class Agent(object):
                 self.qmatrix[state, action] = self.qmatrix[state, action] + self.eta * (reward + self.gamma * np.max(self.qmatrix[new_state, :]) - self.qmatrix[state, action])
                 self.prev_state = state
                 self.prev_action = action
+
+        return done
+
+
+    def play_game(self, game):
+        action = None
+        done = False
+        self.prev_state = None
+        self.prev_action = None
+
+        state = game.translate_board_state_to_index()
+
+        if game.has_opponent_won() == True or game.is_it_a_draw() == True:
+            done = True
+        else:
+            actions = game.get_possible_next_moves()
+
+            if len(actions) > 0:
+                indices = self.translate_actions_to_indices(actions)
+
+                unique_vals = np.unique(self.qmatrix[state, :])
+                if (len(unique_vals) == 1 and unique_vals[0] == 0.0):
+                    action = random.choice(indices)
+                else:
+                    max_val = float('-inf')
+                    top_index = None
+                    for index in indices:
+                        if self.qmatrix[state][index] > max_val:
+                            max_val = self.qmatrix[state][index]
+                            top_index = index
+                    action = top_index
+        
+                action_idx = indices.index(action)
+                game.make_move(actions[action_idx], self.player)
+                new_state = game.translate_board_state_to_index()
+
+                if game.has_agent_won() == True or game.is_it_a_draw() == True:
+                    done = True
 
         return done
 
@@ -222,17 +261,39 @@ class Game(object):
         print("{}|{}|{}".format(state[6], state[7], state[8]))
         print("\n")
 
+
 def opponent_moves(game):
     actions = game.get_possible_next_moves()
     if len(actions) > 0:
         action = random.choice(actions)
         game.make_move(position=action, player='O')
-    
-def play_game(starting_player, agent, game):
+
+
+def train_agent(starting_player, agent, game):
     result = "in progress"
 
     if starting_player == 'X':
         done = agent.qlearning(game)
+        if not done:
+            opponent_moves(game)
+        else:
+            result = "done"
+            game.reset_board()
+    else:
+        opponent_moves(game)
+        done = agent.qlearning(game)
+        if done:
+            result = "done"  
+            game.reset_board()
+
+    return result
+
+
+def play_game(starting_player, agent, game):
+    result = "in progress"
+
+    if starting_player == 'X':
+        done = agent.play_game(game)
         if not done:
             opponent_moves(game)
         else:
@@ -246,7 +307,7 @@ def play_game(starting_player, agent, game):
             game.reset_board()
     else:
         opponent_moves(game)
-        done = agent.qlearning(game)
+        done = agent.play_game(game)
         if done:
             if game.has_agent_won() == True:
                 result = "agent"
@@ -261,20 +322,25 @@ def play_game(starting_player, agent, game):
 
 def main():
     game = Game()
-    agent = Agent(eta=0.5, gamma=0.9, epsilon=1.0)
+    agent = Agent(eta=0.5, gamma=0.9, epsilon=0.1)
 
-    num_epochs = 5
-    stop = 100000
-    epsilon_decay = 0.05
+    num_epochs = 10
+    stop = 10000
+    epsilon_increase = 0.05
     m = 5000
     
     starting_player = 'X'    
     for epoch in range(num_epochs):
-        for i in range(stop):
-            if i == m:
-                agent.update_epsilon(epsilon_decay)
+        game.reset_board()
+        num_training_games = 0
+        while num_training_games < stop:
+            if num_training_games == m:
+                agent.update_epsilon(epsilon_increase)
 
-            result = play_game(starting_player, agent, game)
+            result = train_agent(starting_player, agent, game)
+            if result == "done":
+                num_training_games += 1
+
             if starting_player == 'X':
                 starting_player = 'O'
             else:
@@ -282,6 +348,7 @@ def main():
 
         num_games = 0
         agent_wins = 0
+        game.reset_board()
         while num_games < 10:
             result = play_game(starting_player, agent, game)
             
@@ -296,7 +363,7 @@ def main():
             else:
                 starting_player = 'X'
         
-        print("After {} epochs, agent has won {} out of {} games.".format(epoch + 1, agent_wins, num_games))
+        print("After {} epoch(s), agent has won {} out of {} games.".format(epoch + 1, agent_wins, num_games))
         
     
 
