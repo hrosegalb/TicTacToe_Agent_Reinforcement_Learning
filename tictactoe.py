@@ -359,6 +359,7 @@ def get_user_input(game):
 
     input_done = False
     while not input_done:
+        game.print_board()
         print("Please select the grid element you want by typing in the following format: row,col")
         print("Remember that the grid is 0-based; e.g., row 1, column 1 would be '0,0'")
         user_input = input()
@@ -398,16 +399,19 @@ def get_user_input(game):
 def play_against_user(agent, game):
     player = 'X'
 
-    print("Time to try your hand against the agent. Play 10 games against it and see how you do.")
+    print("\nTime to try your hand against the agent. Play 10 games against it and see how you do.")
     print("Agent is 'X', you are 'O'.")
+    print("\nGame #1:\n")
 
     game.reset_board()
     game.print_board()
 
     num_games = 0
+    prev_game_num = 0
     agent_wins = 0
     user_wins = 0
     num_draws = 0
+
     while num_games < 10:
         if player == 'X':
             print("Agent's turn.")
@@ -426,19 +430,28 @@ def play_against_user(agent, game):
                     num_draws += 1
 
                 num_games += 1
+                if num_games < 10:
+                    print("\nGame #{0}\n".format(num_games + 1))
+
                 game.reset_board()
+
         else:
-            print("Your turn.\n")
+            print("Your turn.\n")   
             result = get_user_input(game)
-            game.print_board()
 
             if result == "user":
                 user_wins += 1
                 num_games += 1
+                if num_games < 10:
+                    print("\nGame #{0}\n".format(num_games + 1))
+
                 game.reset_board()
             elif result == "draw":
                 num_draws += 1
                 num_games += 1
+                if num_games < 10:
+                    print("\nGame #{0}\n".format(num_games + 1))
+
                 game.reset_board()
 
         if player == 'X':
@@ -446,9 +459,9 @@ def play_against_user(agent, game):
         else:
             player = 'X'
 
-    print("Agent won {} games.".format(agent_wins))
-    print("You won {} games.".format(user_wins))
-    print("{} games were a draw.".format(num_draws))
+    print("Agent won {} game(s).".format(agent_wins))
+    print("You won {} game(s).".format(user_wins))
+    print("{} game(s) were a draw.".format(num_draws))
                 
 
 
