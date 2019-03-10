@@ -1,3 +1,4 @@
 pyenv/
+__pycache__/
 .vscode/
 *.png
