@@ -8,17 +8,40 @@ from agent import Agent
 from game import Game
 
 
+# Hannah Galbraith
+# CS546
+# 3/10/19
+# Program 2
+
+########################
+# Auxiliary functions  #
+# for tic-tac-toe game #
+########################
+
+
 def opponent_moves(game):
+    """ :param game: Game object
+       
+        Picks action at random for opponent from a list of possible actions. """
+
     actions = game.get_possible_next_moves()
     if len(actions) > 0:
         action = random.choice(actions)
         game.make_move(position=action, player='O')
 
 
-def train_agent(starting_player, agent, game):
+def train_agent(player, agent, game):
+    """ :param player: 'X' or 'O'
+        :param agent: Agent object
+        :param game: Game object
+        
+        Functioned invoked during training of the agent. Plays one round of tic-tac-toe. If agent.qlearning 
+        returns True, then game is done and method returns 'done' to the calling routine. Otherwise, it returns
+        'in progress'. """
+
     result = "in progress"
 
-    if starting_player == 'X':
+    if player == 'X':
         done = agent.qlearning(game)
         if not done:
             opponent_moves(game)
@@ -35,10 +58,20 @@ def train_agent(starting_player, agent, game):
     return result
 
 
-def play_game(starting_player, agent, game):
+def play_game(player, agent, game):
+        """ :param player: 'X' or 'O'
+        :param agent: Agent object
+        :param game: Game object
+        
+        Functioned invoked during assessment of the agent. Plays one round of tic-tac-toe. If agent.play_game 
+        returns True, then game is done. Function will determine whether agent has won,
+        opponent has won, or whether it's a draw. Depending on the outcome, it will set result to 'agent', 
+        'opponent', or 'draw' and return that to the calling routine. Otherwise, it returns
+        'in progress'. """
+
     result = "in progress"
 
-    if starting_player == 'X':
+    if player == 'X':
         done = agent.play_game(game)
         if not done:
             opponent_moves(game)
@@ -67,11 +100,20 @@ def play_game(starting_player, agent, game):
     return result
 
 
-def assess_agent(starting_player, agent, game, y_axis, epoch=-1):
+def assess_agent(player, agent, game, y_axis):
+    """ :param player: 'X' or 'O'
+        :param agent: Agent object
+        :param game: Game object
+        :param y_axis: list of integers 
+        
+        Function assesses agent's performance after a given training epoch. Plays 10 games against random agent
+        and records the number of times the agent won. Appends result to 'y_axis' list and returns the 
+        current player and y_axis to the calling routine. """
+
     num_games = 0
     agent_wins = 0 
     while num_games < 10:
-        result = play_game(starting_player, agent, game)
+        result = play_game(player, agent, game)
             
         if result == "agent":
             agent_wins += 1
@@ -79,27 +121,28 @@ def assess_agent(starting_player, agent, game, y_axis, epoch=-1):
         elif result != "in progress":
             num_games += 1
 
-        if starting_player == 'X':
-            starting_player = 'O'
+        if player == 'X':
+            player = 'O'
         else:
-            starting_player = 'X'
+            player = 'X'
 
-    if epoch > -1:
-        print("After {} epoch(s), agent has won {} out of {} games.".format(epoch + 1, agent_wins, num_games))
-    else:
-        print("Without training, agent won {} of {} games.".format(agent_wins, num_games))
     y_axis.append(agent_wins)
-    
-    return starting_player, y_axis
+
+    return player, y_axis
 
 
 def plot_progress(x_axis, y_axis):
+    """ :param x_axis: list of integers
+        :param y_axis: list of integers
+        
+        Creates a line graph of agent's progress during training. Saves the plot to a png file. """
     plt.style.use('seaborn-whitegrid')
     plt.plot(np.array(x_axis), np.array(y_axis))
     plt.title("Agent Progress Over Time")
     plt.xlabel("Epoch")
     plt.ylabel("Number of Winning Games out of 10")
 
+    # This is just a bit of logic to get the filename in the format I want
     fname = "agent_wins_" + str(datetime.now())
     fparts = fname.split(' ')
     time = fparts[1].split('.')
@@ -228,7 +271,7 @@ def main():
     epsilon_increase = 0.05
     m = 5000
 
-    # Used for plotting
+    # Used for plotting agent's progress
     x_axis = [i for i in range(num_epochs + 1)]
     y_axis = []
        
