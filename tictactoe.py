@@ -59,7 +59,7 @@ def train_agent(player, agent, game):
 
 
 def play_game(player, agent, game):
-        """ :param player: 'X' or 'O'
+    """ :param player: 'X' or 'O'
         :param agent: Agent object
         :param game: Game object
         
@@ -68,7 +68,6 @@ def play_game(player, agent, game):
         opponent has won, or whether it's a draw. Depending on the outcome, it will set result to 'agent', 
         'opponent', or 'draw' and return that to the calling routine. Otherwise, it returns
         'in progress'. """
-
     result = "in progress"
 
     if player == 'X':
@@ -153,6 +152,17 @@ def plot_progress(x_axis, y_axis):
 
 
 def get_user_input(game):
+    """ :param game: Game object
+    
+        Function invoked to get user input. Outputs instructions to screen, gets user input, and 
+        performs a bunch of logic to make sure the input received is in the correct format, is in
+        an acceptable range, is a valid move, and is a number. 
+        
+        If input is valid, then it calls function to perform action. If user makes winning move or
+        ends the game in a draw, then it prints that out to the screen and returns 'user' or 'draw'
+        to the calling routine. Otherwise, it returns 'in progress' to indicate that the game is 
+        still in progress. """
+
     result = "in progress"
 
     input_done = False
@@ -195,6 +205,11 @@ def get_user_input(game):
     return result
 
 def play_against_user(agent, game):
+    """ :param agent: Agent object
+        :param game: Game object
+        
+        Invoked after the agent has finished training. Plays 10 games against a user and outputs the results. """
+    
     player = 'X'
 
     print("\nTime to try your hand against the agent. Play 10 games against it and see how you do.")
@@ -263,39 +278,44 @@ def play_against_user(agent, game):
                 
 
 def main():
+    # Initialize instance of the Game and Agent objects
     game = Game()
     agent = Agent(eta=0.5, gamma=0.9, epsilon=0.1)
 
+    # Set hyperparameters
     num_epochs = 10
     stop = 10000
     epsilon_increase = 0.05
-    m = 5000
+    m = 5000  # The amount of games played before it's time to increase epsilon
 
     # Used for plotting agent's progress
     x_axis = [i for i in range(num_epochs + 1)]
     y_axis = []
-       
-    starting_player = 'X'
-    starting_player, y_axis = assess_agent(starting_player, agent, game, y_axis)
+    
+    # Assess agent's performance before any training has occurred
+    player = 'X'
+    player, y_axis = assess_agent(player, agent, game, y_axis)
     for epoch in range(num_epochs):
+        # Train agent and assess its performace
         game.reset_board()
         num_training_games = 0
         while num_training_games < stop:
-            if num_training_games == m:
-                agent.update_epsilon(epsilon_increase)
+            if num_training_games == m or num_training_games == (stop - 1):
+                agent.update_epsilon(epsilon_increase) 
 
-            result = train_agent(starting_player, agent, game)
+            result = train_agent(player, agent, game)
             if result == "done":
                 num_training_games += 1
 
-            if starting_player == 'X':
-                starting_player = 'O'
+            if player == 'X':
+                player = 'O'
             else:
-                starting_player = 'X'
+                player = 'X'
 
         game.reset_board()
-        starting_player, y_axis = assess_agent(starting_player, agent, game, y_axis, epoch)
+        player, y_axis = assess_agent(player, agent, game, y_axis)
     
+    # Plot agent's progress and play against user
     plot_progress(x_axis, y_axis)
     play_against_user(agent, game)
         
